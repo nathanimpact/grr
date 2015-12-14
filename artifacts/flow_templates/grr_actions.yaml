@@ -45,3 +45,10 @@ sources:
 - type: GRR_CLIENT_ACTION
   attributes: {client_action: ListProcesses}
 labels: [Processes]
+---
+name: EnumerateProcessModulesGrr
+doc: List processes and their executed modules using the EnumerateProcessModules client action.
+sources:
+- type: GRR_CLIENT_ACTION
+  attributes: {client_action: EnumerateProcessModules}
+labels: [System]
