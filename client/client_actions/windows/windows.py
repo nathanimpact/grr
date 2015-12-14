@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Windows specific actions.
-
 Most of these actions share an interface (in/out rdfvalues) with linux actions
 of the same name. Windows-only actions are registered with the server via
 libs/server_stubs.py
@@ -77,7 +76,6 @@ class EnumerateUsers(actions.ActionPlugin):
 
   def GetUsersAndHomeDirs(self):
     """Gets the home directory from the registry for all users on the system.
-
     Returns:
       A list of tuples containing (username, sid, homedirectory) for each user.
     """
@@ -187,10 +185,38 @@ class EnumerateUsers(actions.ActionPlugin):
         if response:
           self.SendReply(**response)
 
+class EnumerateProcessModules(actions.ActionPlugin):
+  """Enumerate Modules (DLLs) for Processes:
+  Win32_Process definition:
+    https://msdn.microsoft.com/en-us/library/windows/desktop/aa394372(v=vs.85).aspx
+  CIM_ProcessExecutable definition:
+    https://msdn.microsoft.com/en-us/library/windows/desktop/aa387977(v=vs.85).aspx
+  """
+  out_rdfvalue = rdf_client.Filesystem
+
+  def Run(self unused_args):
+    dll_list = [] #List to store DLLs
+    process_list = [] #List to store Processes
+    iter_dict = {} #Dictionary for Processes and array of DLLs belonging to it. Key = Process, Value = [DLLs]
+
+    c = wmi.WMI()
+    processes = c.Win32_Process()
+    dlls = c.CIM_ProcessExecutable()
+
+    for dll in dlls:
+      #if dll.Antecedent.Caption not in dll_list: #May slow down, but disallows duplicates
+      dll_list.append(dll.Antecedent.Caption) #Gets Antecedent of 
+      process_list.append(dll.Dependent.Caption) #Gets name of Process it belongs to
+
+    dll_process_dict = dict(zip(dll_list, process_list)) #Dictionary for DLLs and Processes. Key = DLL, Value = Process.
+
+    for dll, process in dll_process_dict.iteritems():
+        iter_dict.setdefault(process, []).append(dll)
+
+    self.SendReply(iter_dict)
 
 class EnumerateInterfaces(actions.ActionPlugin):
   """Enumerate all MAC addresses of all NICs.
-
   Win32_NetworkAdapterConfiguration definition:
     http://msdn.microsoft.com/en-us/library/aa394217(v=vs.85).aspx
   """
@@ -292,11 +318,9 @@ class WmiQuery(actions.ActionPlugin):
 
 def RunWMIQuery(query, baseobj=r"winmgmts:\root\cimv2"):
   """Run a WMI query and return a result.
-
   Args:
     query: the WMI query to run.
     baseobj: the base object for the WMI query.
-
   Yields:
     rdf_protodict.Dicts containing key value pairs from the resulting COM
     objects.
@@ -343,7 +367,6 @@ CTRL_IOCTRL = CtlCode(0x22, 0x101, 0, 3)  # Set acquisition modes.
 
 class UninstallDriver(actions.ActionPlugin):
   """Unloads and deletes a memory driver.
-
   Note that only drivers with a signature that validates with
   Client.driver_signing_public_key can be uninstalled.
   """
@@ -353,12 +376,10 @@ class UninstallDriver(actions.ActionPlugin):
   @staticmethod
   def UninstallDriver(driver_path, service_name, delete_file=False):
     """Unloads the driver and delete the driver file.
-
     Args:
       driver_path: Full path name to the driver file.
       service_name: Name of the service the driver is loaded as.
       delete_file: Should we delete the driver file after removing the service.
-
     Raises:
       OSError: On failure to uninstall or delete.
     """
@@ -395,7 +416,6 @@ class UninstallDriver(actions.ActionPlugin):
 
 class InstallDriver(UninstallDriver):
   """Installs a driver.
-
   Note that only drivers with a signature that validates with
   Client.driver_signing_public_key can be loaded.
   """
