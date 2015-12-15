@@ -185,36 +185,6 @@ class EnumerateUsers(actions.ActionPlugin):
         if response:
           self.SendReply(**response)
 
-class EnumerateProcessModules(actions.ActionPlugin):
-  """Enumerate Modules (DLLs) for Processes:
-  Win32_Process definition:
-    https://msdn.microsoft.com/en-us/library/windows/desktop/aa394372(v=vs.85).aspx
-  CIM_ProcessExecutable definition:
-    https://msdn.microsoft.com/en-us/library/windows/desktop/aa387977(v=vs.85).aspx
-  """
-  out_rdfvalue = rdf_client.Filesystem
-
-  def Run(self unused_args):
-    dll_list = [] #List to store DLLs
-    process_list = [] #List to store Processes
-    iter_dict = {} #Dictionary for Processes and array of DLLs belonging to it. Key = Process, Value = [DLLs]
-
-    c = wmi.WMI()
-    processes = c.Win32_Process()
-    dlls = c.CIM_ProcessExecutable()
-
-    for dll in dlls:
-      #if dll.Antecedent.Caption not in dll_list: #May slow down, but disallows duplicates
-      dll_list.append(dll.Antecedent.Caption) #Gets Antecedent of 
-      process_list.append(dll.Dependent.Caption) #Gets name of Process it belongs to
-
-    dll_process_dict = dict(zip(dll_list, process_list)) #Dictionary for DLLs and Processes. Key = DLL, Value = Process.
-
-    for dll, process in dll_process_dict.iteritems():
-        iter_dict.setdefault(process, []).append(dll)
-
-    self.SendReply(iter_dict)
-
 class EnumerateInterfaces(actions.ActionPlugin):
   """Enumerate all MAC addresses of all NICs.
   Win32_NetworkAdapterConfiguration definition:
