@@ -917,3 +917,85 @@ message WMICommandLineEventConsumer {
     description: "Maximum queue for a specific consumer, in bytes."
   }];
 }
+
+// A Process record describing a system process with DLLs
+message ProcessDLL {
+  option (semantic) = {
+    description: "Process and DLL information."
+  };
+
+  optional uint32 pid = 1;
+  optional uint32 ppid = 2;
+  optional string name = 3;
+  optional string exe = 4;
+  repeated string cmdline = 5;
+  optional uint64 ctime = 6;
+  optional uint32 real_uid = 7;
+  optional uint32 effective_uid = 8;
+  optional uint32 saved_uid = 9;
+  optional uint32 real_gid = 10;
+  optional uint32 effective_gid = 11;
+  optional uint32 saved_gid = 12;
+  optional string username = 13;
+  optional string terminal = 14;
+  optional string status = 15;
+  optional int32 nice = 16;
+  optional string cwd = 17;
+  optional uint32 num_threads = 18;
+  optional float user_cpu_time = 19;
+  optional float system_cpu_time = 20;
+  optional float cpu_percent = 21;
+  optional uint64 RSS_size = 22;
+  optional uint64 VMS_size = 23;
+  optional float memory_percent = 24;
+  optional string dll = 25;
+  repeated string open_files = 26;
+  repeated NetworkConnection connections = 27;
+}
+
+message NetworkEndpoint {
+  optional string ip = 1;
+  optional int32 port = 2;
+}
+
+message NetworkConnection {
+  enum Family {
+    INET = 2;
+    INET6 = 10;
+    INET6_WIN = 23;
+    INET6_OSX = 30;
+  };
+  enum Type {
+    UNKNOWN_SOCKET = 0;
+    SOCK_STREAM = 1;
+    SOCK_DGRAM = 2;
+  };
+
+  optional Family family = 1;
+  optional Type type = 2 [default = UNKNOWN_SOCKET];
+  optional NetworkEndpoint local_address = 3;
+  optional NetworkEndpoint remote_address = 4;
+
+  // This enum contains connection states as returned by psutils.
+  enum State {
+    UNKNOWN = 0;
+    CLOSED = 1;
+    LISTEN = 2;
+    SYN_SENT = 3;
+    SYN_RECV = 4;
+    ESTABLISHED = 5;
+    FIN_WAIT1 = 6;
+    FIN_WAIT2 = 7;
+    CLOSE_WAIT = 8;
+    CLOSING = 9;
+    LAST_ACK = 10;
+    TIME_WAIT = 11;
+    DELETE_TCB = 12;
+    // psutils later than v1.0 return "NONE" instead of "UNKNOWN" so we
+    // support both.
+    NONE = 13;
+  };
+  optional State state = 5 [default = UNKNOWN];
+  optional uint32 pid = 6;
+  optional uint64 ctime = 7;
+}
