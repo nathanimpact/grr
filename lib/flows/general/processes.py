@@ -95,17 +95,20 @@ class ListProcesses(flow.GRRFlow):
                     "Listed {0:d} processes".format(num_items))
 
 
-class EnumerateProcessModules(flow.GRRFlow):
-  """List modules of running processes on a system."""
+class ListProcessesModulesArgs(rdf_structs.RDFProtoStruct):
+  protobuf = flows_pb2.ListProcessesModulesArgs
+
+class ListProcessesModules(flow.GRRFlow):
+  """List modules for a running processes on a system."""
 
   category = "/Processes/"
   behaviours = flow.GRRFlow.behaviours + "BASIC"
-  args_type = ListProcessesArgs
+  args_type = ListProcessesModulesArgs
 
-  @flow.StateHandler(next_state=["IterateProcesses"])
+  @flow.StateHandler(next_state=["IterateProcessesModules"])
   def Start(self):
     """Start processing."""
-    self.CallClient("EnumerateProcessModules", next_state="IterateProcessModules")
+    self.CallClient("ListProcessesModules", next_state="IterateProcessesModules")
 
   @flow.StateHandler(next_state="HandleDownloadedFiles")
   def IterateProcessesModules(self, responses):
@@ -170,9 +173,9 @@ class EnumerateProcessModules(flow.GRRFlow):
       num_items = len(self.runner.output)
       if self.args.fetch_binaries:
         self.Notify("ViewObject", self.runner.output.urn,
-                    "ListProcesses completed. "
+                    "ListProcessesModules completed. "
                     "Fetched {0:d} files".format(num_items))
       else:
         self.Notify("ViewObject", self.runner.output.urn,
-                    "ListProcesses completed. "
+                    "ListProcessesModules completed. "
                     "Listed {0:d} processes".format(num_items))
