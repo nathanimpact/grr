@@ -845,3 +845,6 @@ class GetClientStatsRequest(structs.RDFProtoStruct):
   """Request for GetClientStats action."""
   protobuf = jobs_pb2.GetClientStatsRequest
 
+class ProcessDLL(structs.RDFProtoStruct):
+  """Represent a process on the client."""
+  protobuf = sysinfo_pb2.ProcessDLL
