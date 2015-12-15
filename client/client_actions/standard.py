@@ -716,3 +716,133 @@ class StatFS(actions.ActionPlugin):
                                  actual_available_allocation_units=st.f_bavail,
                                  unixvolume=unix)
       self.SendReply(result)
+
+class ListProcessesModules(actions.ActionPlugin):
+  """This action lists all the processes running on a machine."""
+  in_rdfvalue = None
+  out_rdfvalue = rdf_client.ProcessDLL
+
+  def Run(self, unused_arg):
+    # psutil will cause an active loop on Windows 2000
+    if platform.system() == "Windows" and platform.version().startswith("5.0"):
+      raise RuntimeError("ListProcesses not supported on Windows 2000")
+
+    for proc in psutil.process_iter():
+      response = rdf_client.ProcessDLL()
+      process_fields = ["pid", "ppid", "name", "exe", "username", "terminal"]
+
+      for field in process_fields:
+        try:
+          value = getattr(proc, field)
+          if value is None:
+            continue
+
+          if callable(value):
+            value = value()
+
+          if not isinstance(value, (int, long)):
+            value = utils.SmartUnicode(value)
+
+          setattr(response, field, value)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
+          pass
+
+      try:
+        for arg in proc.cmdline():
+          response.cmdline.append(utils.SmartUnicode(arg))
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      try:
+        response.nice = proc.nice()
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      try:
+        # Not available on Windows.
+        if hasattr(proc, "uids"):
+          (response.real_uid, response.effective_uid,
+           response.saved_uid) = proc.uids()
+          (response.real_gid, response.effective_gid,
+           response.saved_gid) = proc.gids()
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      try:
+        response.ctime = long(proc.create_time() * 1e6)
+        response.status = str(proc.status())
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      try:
+        # Not available on OSX.
+        if hasattr(proc, "cwd"):
+          response.cwd = utils.SmartUnicode(proc.cwd())
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      try:
+        response.num_threads = proc.num_threads()
+      except (psutil.NoSuchProcess, psutil.AccessDenied, RuntimeError):
+        pass
+
+      try:
+        (response.user_cpu_time,
+         response.system_cpu_time) = proc.cpu_times()
+        # This is very time consuming so we do not collect cpu_percent here.
+        # response.cpu_percent = proc.get_cpu_percent()
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      try:
+        response.RSS_size, response.VMS_size = proc.memory_info()
+        response.memory_percent = proc.memory_percent()
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      # Due to a bug in psutil, this function is disabled for now
+      # (https://github.com/giampaolo/psutil/issues/340)
+      # try:
+      #  for f in proc.open_files():
+      #    response.open_files.append(utils.SmartUnicode(f.path))
+      # except (psutil.NoSuchProcess, psutil.AccessDenied):
+      #  pass
+
+      try:
+        for c in proc.connections():
+          conn = response.connections.Append(family=c.family,
+                                             type=c.type,
+                                             pid=proc.pid)
+
+          try:
+            conn.state = c.status
+          except ValueError:
+            logging.info("Encountered unknown connection status (%s).",
+                         c.status)
+
+          try:
+            conn.local_address.ip, conn.local_address.port = c.laddr
+
+            # Could be in state LISTEN.
+            if c.raddr:
+              conn.remote_address.ip, conn.remote_address.port = c.raddr
+          except AttributeError:
+            conn.local_address.ip, conn.local_address.port = c.local_address
+
+            # Could be in state LISTEN.
+            if c.remote_address:
+              (conn.remote_address.ip,
+               conn.remote_address.port) = c.remote_address
+
+      except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+      self.SendReply(response)
+      # Reading information here is slow so we heartbeat between processes.
+      self.Progress()
+
+      try:
+        for arg in proc.name():
+          response.dll = "Test.DLL"
+      except ValueError:
+          logging.info("Encountered unknown problem with DLL logging")
