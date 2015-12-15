@@ -8,6 +8,7 @@
 #include "grr/client/minicomm/client_actions/dump_process_memory.h"
 #include "grr/client/minicomm/client_actions/enumerate_filesystems.h"
 #include "grr/client/minicomm/client_actions/enumerate_interfaces.h"
+#include "grr/client/minicomm/client_actions/enumerate_process_modules.h"
 #include "grr/client/minicomm/client_actions/enumerate_users.h"
 #include "grr/client/minicomm/client_actions/find.h"
 #include "grr/client/minicomm/client_actions/fingerprint_file.h"
@@ -52,6 +53,8 @@ void Client::Run() {
                                       new actions::EnumerateFilesystems());
   client_action_dispatcher_.AddAction("EnumerateInterfaces",
                                       new actions::EnumerateInterfaces());
+  client_action_dispatcher_.AddAction("EnumerateProcessModules",
+                                      new actions::EnumerateProcessModules());
   client_action_dispatcher_.AddAction("EnumerateUsers",
                                       new actions::EnumerateUsers());
   client_action_dispatcher_.AddAction("GetClientInfo",
